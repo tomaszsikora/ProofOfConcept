@@ -2,8 +2,10 @@ package com.arokis.qa;
 
 
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -12,8 +14,8 @@ public class DirectCacheTest {
 
     static DirectCache directCache;
 
-    @Before
-    public void setUp() throws Exception {
+    @BeforeClass
+    public static void setUp() throws Exception {
         directCache = new DirectCache(1);
     }
 
@@ -37,30 +39,42 @@ public class DirectCacheTest {
     public void put()
     {
         long before = directCache.getRemaining();
-        byte[] tab =   {0x00,0x12,0x11,0x12,
-                0x12,0x11,0x10,0x10,0x01,0x14,
-                0x12,0x11,0x10,0x10,0x01,0x14,
-                0x12,0x11,0x10,0x10,0x01,0x14,
-                0x12,0x11,0x10,0x10,0x01,0x14,
-                0x12,0x11,0x10,0x10,0x01,0x14,
-                0x12,0x11,0x10,0x10,0x01,0x14,
-                0x12,0x11,0x10,0x10,0x01,0x14,
-                0x12,0x11,0x10,0x10,0x01,0x14,
-                0x12,0x11,0x10,0x10,0x01,0x14,
-                0x12,0x11,0x10,0x10,0x01,0x14,
-                0x12,0x11,0x10,0x10,0x01,0x14,
-                0x12,0x11,0x10,0x10,0x01,0x14,
-                0x12,0x10,0x10,0x01,0x12,0x23,
-                0x11
+        System.out.println(directCache.getRemaining());
+        byte[] tab =   {0x00,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,
+
 
         };
-        for(int i=0;i<1024*1024*24;i++)
-        directCache.put(i,tab);
+        for(int i=0;i<10000000;i++)
+       // if(i%2==0)
+            directCache.put(i,tab);
+
+        byte[] tab2 =   {0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,
+                0x12
+
+        };
+        long test = 0;
+        for(int i=0;i<10000000;i++)
+            test+=directCache.get(i).length;
+            //assertArrayEquals(tab,directCache.get(i));
+
+        System.out.println(directCache.getRemaining());
+        for(int i=0;i<10000000;i++)
+            if(i%7==0)
+            directCache.update(i,tab2);
 
 
         long after = directCache.getRemaining();
         System.out.println(after);
         assertTrue(before > after);
+
+        directCache.compact();
+        System.out.println(directCache.getRemaining());
+        for(int i=0;i<10000000;i++)
+            if(i%7==0)
+            assertArrayEquals(tab2,directCache.get(i));
+            else
+                assertArrayEquals(tab,directCache.get(i));
+
 
     }
 }

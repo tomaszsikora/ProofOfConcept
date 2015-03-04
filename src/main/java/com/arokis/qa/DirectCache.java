@@ -1,24 +1,27 @@
 package com.arokis.qa;
 
 import gnu.trove.map.TIntLongMap;
+import gnu.trove.map.TLongIntMap;
 import gnu.trove.map.hash.TIntLongHashMap;
+import gnu.trove.map.hash.TLongIntHashMap;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 /**
  * Created by tomek on 02.03.15.
  */
 public class DirectCache {
 
-    private ByteBuffer[] cache;
-    private TIntLongMap idPositionSize = new TIntLongHashMap();
+    private final ByteBuffer[] cache;
+    private final TIntLongMap idPositionSize = new TIntLongHashMap();
     private long lastFreePosition;
-    private int partitions;
-    private int partitionSize = Integer.MAX_VALUE;
+    private final int partitions;
+    private final int partitionSize = 1024*1024*1024;
 
-    public DirectCache(int partitions)
+    public DirectCache(int parts)
     {
-        this.partitions = partitions;
+        partitions = parts;
         cache = new ByteBuffer[partitions];
         for(int i=0;i<partitions;i++)
         {
@@ -29,15 +32,21 @@ public class DirectCache {
 
     public long getRemaining()
     {
-        return (partitions*partitionSize)-lastFreePosition;
+        return (( (long) partitions * (long) partitionSize) - lastFreePosition);
     }
 
     public byte[] get(int id)
     {
         long positionAndSize = idPositionSize.get(id);
+        return getBytes(positionAndSize);
+
+    }
+
+    private byte[] getBytes(long positionAndSize) {
         if(positionAndSize==0)
         {
-            return null;
+            final byte[] empty = {};
+            return empty;
         }
         int size = sizeDecompile(positionAndSize);
         long position = positionDecompile(positionAndSize);
@@ -59,30 +68,35 @@ public class DirectCache {
             cache[part].get(record);
         }
         return record;
-
     }
 
 
     public void put(int mainId, byte[] record)
     {
-        if(record.length+lastFreePosition>partitionSize*partitions)
+        if(record.length > getRemaining())
         {
-            throw new RuntimeException("Not Enough memory to put new record");
+            throw new RuntimeException("Not Enough memory to putBytes new record: " + lastFreePosition);
         }
-        int part = calculatePartition(lastFreePosition);
-        int posInPart = (int) lastFreePosition%partitionSize;
         long combined = combine(record.length,lastFreePosition);
-        lastFreePosition+=record.length;
         idPositionSize.put(mainId,combined);
+        putBytes(lastFreePosition,record);
+        lastFreePosition+=record.length;
+
+    }
+
+    private void putBytes(long position,byte[] record) {
+
+        int part = calculatePartition(position);
+        int posInPart = (int) position%partitionSize;
         int offset = partitionSize-posInPart;
         if(offset < record.length)
         {
             {
                 cache[part].position(posInPart);
-                cache[part].put(record,0,offset);
+                cache[part].put(record, 0, offset);
                 part++;
                 cache[part].position(0);
-                cache[part].put(record,offset,record.length-offset);
+                cache[part].put(record, offset, record.length - offset);
             }
         }
         else
@@ -90,23 +104,56 @@ public class DirectCache {
             cache[part].position(posInPart);
             cache[part].put(record);
         }
-
-
     }
+
+    public void delete(int maindId)
+    {
+        idPositionSize.remove(maindId);
+    }
+
+    public void update(int key, byte[] record)
+    {
+        long position = positionDecompile(idPositionSize.get(key));
+        long size = sizeDecompile(idPositionSize.get(key));
+        if(size>=record.length)
+        {
+
+            putBytes(position,record);
+            idPositionSize.put(key,combine(record.length,position));
+        }
+        else
+        {
+            put(key,record);
+        }
+    }
+
+    public void compact() {
+
+        TLongIntMap temporaryMap = new TLongIntHashMap(idPositionSize.values(),idPositionSize.keys());
+        lastFreePosition = 0;
+        long[] values = idPositionSize.values();
+        Arrays.sort(values);
+        for(long value : values)
+        {
+            put(temporaryMap.get(value),getBytes(value));
+        }
+    }
+
+
 
     private long combine(int inputSize,long inputPosition)
     {
-        return ((long)(inputSize)<<48 ) | inputPosition;
-    }
-
-    private int sizeDecompile(long combined)
-    {
-        return (int)(combined>>48);
+        return ((long)(inputPosition)<<16 ) | inputSize;
     }
 
     private long positionDecompile(long combined)
     {
-        return combined & 0x0000ffffffffffffL;
+        return (int)(combined>>16);
+    }
+
+    private int sizeDecompile(long combined)
+    {
+        return (int) (combined & 0x000000000000ffffL);
     }
 
     private int calculatePartition(long position)

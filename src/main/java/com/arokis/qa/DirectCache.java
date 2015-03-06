@@ -13,6 +13,9 @@ import java.util.Arrays;
  */
 public class DirectCache {
 
+    private final long totalCapacity;
+    private long compactFactor = 90;
+    private long compactLevel;
     private final ByteBuffer[] cache;
     private final TIntLongMap idPositionSize = new TIntLongHashMap();
     private long lastFreePosition;
@@ -28,6 +31,8 @@ public class DirectCache {
             cache[i] = ByteBuffer.allocateDirect(partitionSize);
         }
         lastFreePosition = 0;
+        totalCapacity = (long) partitions * (long) partitionSize;
+        compactLevel = (totalCapacity * compactFactor)/100;
     }
 
     public long getRemaining()
@@ -40,6 +45,42 @@ public class DirectCache {
         long positionAndSize = idPositionSize.get(id);
         return getBytes(positionAndSize);
 
+    }
+
+    public void putOrUpdate(int key, byte[] record)
+    {
+        if(record.length>65567)
+        {
+            throw new IllegalArgumentException("Record size is too large to put in cache");
+        }
+        long position = positionDecompile(idPositionSize.get(key));
+        long size = sizeDecompile(idPositionSize.get(key));
+        if(size>=record.length)
+        {
+            putBytes(position,record);
+            idPositionSize.put(key,combine(record.length,position));
+        }
+        else
+        {
+            put(key,record);
+        }
+    }
+
+    public void delete(int maindId)
+    {
+        idPositionSize.remove(maindId);
+    }
+
+    public void compact() {
+
+        TLongIntMap temporaryMap = new TLongIntHashMap(idPositionSize.values(),idPositionSize.keys());
+        lastFreePosition = 0;
+        long[] values = idPositionSize.values();
+        Arrays.sort(values);
+        for(long value : values)
+        {
+            put(temporaryMap.get(value),getBytes(value));
+        }
     }
 
     private byte[] getBytes(long positionAndSize) {
@@ -71,8 +112,14 @@ public class DirectCache {
     }
 
 
-    public void put(int mainId, byte[] record)
+    private void put(int mainId, byte[] record)
     {
+        if(getRemaining()<(totalCapacity-compactLevel))
+        {
+            compact();
+            compactFactor++;
+            compactLevel=(totalCapacity*compactFactor)/100;
+        }
         if(record.length > getRemaining())
         {
             throw new RuntimeException("Not Enough memory to putBytes new record: " + lastFreePosition);
@@ -106,38 +153,7 @@ public class DirectCache {
         }
     }
 
-    public void delete(int maindId)
-    {
-        idPositionSize.remove(maindId);
-    }
 
-    public void update(int key, byte[] record)
-    {
-        long position = positionDecompile(idPositionSize.get(key));
-        long size = sizeDecompile(idPositionSize.get(key));
-        if(size>=record.length)
-        {
-
-            putBytes(position,record);
-            idPositionSize.put(key,combine(record.length,position));
-        }
-        else
-        {
-            put(key,record);
-        }
-    }
-
-    public void compact() {
-
-        TLongIntMap temporaryMap = new TLongIntHashMap(idPositionSize.values(),idPositionSize.keys());
-        lastFreePosition = 0;
-        long[] values = idPositionSize.values();
-        Arrays.sort(values);
-        for(long value : values)
-        {
-            put(temporaryMap.get(value),getBytes(value));
-        }
-    }
 
 
 

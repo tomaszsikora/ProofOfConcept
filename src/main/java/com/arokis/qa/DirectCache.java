@@ -11,7 +11,7 @@ import java.util.Arrays;
 /**
  * Created by tomek on 02.03.15.
  */
-public class DirectCache {
+public class DirectCache implements IDirectCache {
 
     private final long totalCapacity;
     private long compactFactor = 90;
@@ -35,19 +35,22 @@ public class DirectCache {
         compactLevel = (totalCapacity * compactFactor)/100;
     }
 
+    @Override
     public long getRemaining()
     {
         return (( (long) partitions * (long) partitionSize) - lastFreePosition);
     }
 
-    public byte[] get(int id)
+    @Override
+    public synchronized byte[] get(int id)
     {
         long positionAndSize = idPositionSize.get(id);
         return getBytes(positionAndSize);
 
     }
 
-    public void putOrUpdate(int key, byte[] record)
+    @Override
+    public synchronized void putOrUpdate(int key, byte[] record)
     {
         if(record.length>65567)
         {
@@ -66,12 +69,13 @@ public class DirectCache {
         }
     }
 
-    public void delete(int maindId)
+    @Override
+    public synchronized void delete(int maindId)
     {
         idPositionSize.remove(maindId);
     }
 
-    public void compact() {
+    public synchronized void compact() {
 
         TLongIntMap temporaryMap = new TLongIntHashMap(idPositionSize.values(),idPositionSize.keys());
         lastFreePosition = 0;

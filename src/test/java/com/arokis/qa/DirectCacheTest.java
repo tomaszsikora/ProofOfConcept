@@ -59,6 +59,7 @@ public class DirectCacheTest {
     @Test
     public void put()
     {
+        directCache = new DirectCache(1);
         long before = directCache.getRemaining();
         System.out.println(directCache.getRemaining());
         byte[] tab =   {0x00,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,
@@ -69,7 +70,7 @@ public class DirectCacheTest {
         long startPut = System.nanoTime();
         for(int i=0;i<number;i++)
        // if(i%2==0)
-            directCache.put(i,tab);
+            directCache.putOrUpdate(i,tab);
 
         long stopPut = System.nanoTime();
         System.out.println("Avg put:" + (stopPut-startPut)/number +" Throughput: "+ ((((long) number * (long)tab.length)/(1024*1024))/TimeUnit.SECONDS.convert(stopPut-startPut,TimeUnit.NANOSECONDS))+ "MB/s");

@@ -10,6 +10,8 @@ import java.nio.channels.Channel;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 
+import static com.arokis.qa.CacheCommands.*;
+
 /**
  * Created by tomek on 05.03.15.
  */
@@ -29,11 +31,11 @@ public class RemoteCache implements IDirectCache {
     @Override
     public long getRemaining() {
         buffer.position(0);
-        buffer.put((byte) 4);
+        buffer.put(REMAINING);
         while(true)
         {
             buffer.position(0);
-            if(buffer.get()==0)
+            if(buffer.get()==READY)
             {
                 buffer.position(1);
                 long remaining = buffer.getLong();
@@ -45,19 +47,22 @@ public class RemoteCache implements IDirectCache {
 
     @Override
     public byte[] get(int id) {
-        buffer.position(0);
-        buffer.put((byte) 1);
+        buffer.position(1);
         buffer.putInt(id);
+        buffer.position(0);
+        buffer.put(GET);
         while(true)
         {
             buffer.position(0);
-            if(buffer.get()==0)
+            if(buffer.get()==READY)
             {
+                buffer.position(1);
                 int size = buffer.getInt();
                 byte[] response = new byte[size];
                 buffer.get(response);
                 return response;
             }
+            Thread.yield();
         }
     }
 
@@ -68,11 +73,11 @@ public class RemoteCache implements IDirectCache {
         buffer.putInt(record.length);
         buffer.put(record);
         buffer.position(0);
-        buffer.put((byte) 2);
+        buffer.put(PUTORUPDATE);
         while(true)
         {
             buffer.position(0);
-            if(buffer.get()==0)
+            if(buffer.get()==READY)
             {
                 return;
             }
@@ -84,15 +89,18 @@ public class RemoteCache implements IDirectCache {
 
     @Override
     public void delete(int maindId) {
+        buffer.position(1);
+        buffer.putInt(maindId);
         buffer.position(0);
-        buffer.put((byte) 3);
+        buffer.put(DELETE);
         while(true)
         {
             buffer.position(0);
-            if(buffer.get()==0)
+            if(buffer.get()==READY)
             {
                 return;
             }
+            Thread.yield();
         }
 
     }

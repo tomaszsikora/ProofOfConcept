@@ -6,6 +6,11 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.util.concurrent.*;
+import java.util.concurrent.locks.*;
+
+import static com.arokis.qa.CacheCommands.*;
 
 /**
  * Created by tomek on 06.03.15.
@@ -13,6 +18,7 @@ import java.nio.channels.FileChannel;
 public class RemoteCacheServer {
     DirectCache cache;
     FileChannel fc;
+    ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
     public MappedByteBuffer buffer;
     RemoteCacheServer(String path) throws IOException {
@@ -27,36 +33,54 @@ public class RemoteCacheServer {
         buffer.force();
 
     }
-    public void read() throws IOException {
+    public void read() throws InterruptedException {
         buffer.position(0);
         byte operation = buffer.get();
-        if(operation!=0)
+        if(operation==0)
         {
-            switch (operation)
+            LockSupport.parkNanos(1);
+
+            return;
+        }
+        switch (operation)
             {
-                case (byte)2:
+                case GET:
+                    buffer.position(1);
+                    int mainId = buffer.getInt();
+                    byte[] record = cache.get(mainId);
+                    buffer.position(1);
+                    buffer.putInt(record.length);
+                    buffer.put(record);
+                    buffer.position(0);
+                    buffer.put(READY);
+                    break;
+                case PUTORUPDATE:
                     buffer.position(1);
                     int key = buffer.getInt();
                     int size = buffer.getInt();
-                    byte[] record = new byte[size];
-                    buffer.get(record);
-                    cache.putOrUpdate(key,record);
+                    byte[] newRecord = new byte[size];
+                    buffer.get(newRecord);
+                    cache.putOrUpdate(key,newRecord);
                     buffer.position(0);
-                    buffer.put((byte)0);
+                    buffer.put(READY);
                     break;
-                case (byte)4:
+                case DELETE:
+                    buffer.position(1);
+                    int id = buffer.getInt();
+                    cache.delete(id);
+                    buffer.position(0);
+                    buffer.put(READY);
+                    break;
+                case REMAINING:
                     buffer.position(1);
                     buffer.putLong(cache.getRemaining());
                     buffer.position(0);
-                    buffer.put((byte)0);
+                    buffer.put(READY);
                     break;
                 default:
                     break;
 
             }
-
-        }
-
 
     }
 
@@ -64,8 +88,7 @@ public class RemoteCacheServer {
         RemoteCacheServer server = new RemoteCacheServer(args[0]);
         while(true)
         {
-         //  server.buffer.load();
-           server.read();
+            server.read();
            Thread.yield();
 
         }

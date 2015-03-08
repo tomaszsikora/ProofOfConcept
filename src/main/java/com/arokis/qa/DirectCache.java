@@ -17,7 +17,7 @@ public class DirectCache implements IDirectCache {
     private long compactFactor = 90;
     private long compactLevel;
     private final ByteBuffer[] cache;
-    private final TIntLongMap idPositionSize = new TIntLongHashMap();
+    private final TIntLongMap idPositionSize = new TIntLongHashMap(150_000_000);
     private long lastFreePosition;
     private final int partitions;
     private final int partitionSize = 1024*1024*1024;
@@ -72,7 +72,7 @@ public class DirectCache implements IDirectCache {
     @Override
     public synchronized void delete(int maindId)
     {
-        idPositionSize.remove(maindId);
+        idPositionSize.put(maindId,0);
     }
 
     public synchronized void compact() {

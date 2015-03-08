@@ -28,7 +28,7 @@ public class DirectCacheTest {
 
     @Test
     public void synchTest() throws InterruptedException {
-        Testowa test = new Testowa();
+        final Testowa test = new Testowa();
         ForkJoinPool pool = new ForkJoinPool(8);
         for(int i=0;i<32;i++) {
             pool.execute(new Runnable() {
@@ -59,7 +59,7 @@ public class DirectCacheTest {
     @Test
     public void put()
     {
-        directCache = new DirectCache(1);
+        directCache = new DirectCache(4);
         long before = directCache.getRemaining();
         System.out.println(directCache.getRemaining());
         byte[] tab =   {0x00,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,

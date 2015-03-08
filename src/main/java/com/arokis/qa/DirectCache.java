@@ -17,7 +17,7 @@ public class DirectCache implements IDirectCache {
     private long compactFactor = 90;
     private long compactLevel;
     private final ByteBuffer[] cache;
-    private final TIntLongMap idPositionSize = new TIntLongHashMap(150_000_000);
+    private final TIntLongMap idPositionSize = new TIntLongHashMap();
     private long lastFreePosition;
     private final int partitions;
     private final int partitionSize = 1024*1024*1024;

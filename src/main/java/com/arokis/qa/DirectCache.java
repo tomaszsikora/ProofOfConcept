@@ -95,7 +95,7 @@ public class DirectCache implements IDirectCache {
         }
         int size = sizeDecompile(positionAndSize);
         long position = positionDecompile(positionAndSize);
-        int posInPart = (int) position%partitionSize;
+        int posInPart = (int) (position%(long)partitionSize);
         int part = calculatePartition(position);
         int offset = partitionSize-posInPart;
         byte[] record = new byte[size];
@@ -138,7 +138,7 @@ public class DirectCache implements IDirectCache {
     private void putBytes(long position,byte[] record) {
 
         int part = calculatePartition(position);
-        int posInPart = (int) position%partitionSize;
+        int posInPart = (int) (position%(long)partitionSize);
         int offset = partitionSize-posInPart;
         if(offset < record.length)
         {
@@ -178,7 +178,7 @@ public class DirectCache implements IDirectCache {
 
     private int calculatePartition(long position)
     {
-        return (int) position/partitionSize;
+        return (int) (position/(long)partitionSize);
     }
 
 

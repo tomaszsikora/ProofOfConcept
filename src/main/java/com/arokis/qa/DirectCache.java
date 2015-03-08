@@ -163,12 +163,12 @@ public class DirectCache implements IDirectCache {
 
     private long combine(int inputSize,long inputPosition)
     {
-        return ((long)(inputPosition)<<16 ) | inputSize;
+        return ((long)(inputPosition)<<16 ) | (long)inputSize;
     }
 
     private long positionDecompile(long combined)
     {
-        return (int)(combined>>16);
+        return (long)(combined>>>16);
     }
 
     private int sizeDecompile(long combined)

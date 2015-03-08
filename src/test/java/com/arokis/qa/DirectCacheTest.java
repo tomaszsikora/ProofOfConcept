@@ -49,17 +49,17 @@ public class DirectCacheTest {
     public void bitOperation()
     {
         long inputPosition = 1024*1024*1024*200L;
-        int inputSize = 121;
-        long combined =  ((long)(inputSize)<<48 ) | inputPosition;
+        int inputSize = 532;
+        long combined =  ((long)(inputPosition)<<16 ) | (long)inputSize;
 
-        assertEquals(inputPosition,(combined & 0x0000ffffffffffffL));
-        assertEquals(inputSize,(combined>>48));
+        assertEquals(inputSize,(combined & 0x000000000000ffffL));
+        assertEquals(inputPosition,(combined>>>16));
     }
 
     @Test
     public void put()
     {
-        directCache = new DirectCache(3);
+        directCache = new DirectCache(1);
         long before = directCache.getRemaining();
         System.out.println(directCache.getRemaining());
         byte[] tab =   {0x00,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,
@@ -69,19 +69,18 @@ public class DirectCacheTest {
                 0x00,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,
                 0x00,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,
                 0x00,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,
-                0x00,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12
-
+                0x00,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,
 
         };
         System.out.println(tab.length);
-        int number = 10000000;
+        int number = 1000000;
         long startPut = System.nanoTime();
         for(int i=0;i<number;i++)
        // if(i%2==0)
             directCache.putOrUpdate(i,tab);
 
         long stopPut = System.nanoTime();
-        System.out.println("Avg put:" + (stopPut-startPut)/number +" Throughput: "+ ((((long) number * (long)tab.length)/(1024*1024))/TimeUnit.SECONDS.convert(stopPut-startPut,TimeUnit.NANOSECONDS))+ "MB/s");
+        System.out.println("Avg put:" + (stopPut-startPut)/number +" Throughput: "+ ((((long) number * (long)tab.length)/(1024*1024))/TimeUnit.MILLISECONDS.convert(stopPut-startPut,TimeUnit.NANOSECONDS))+ "MB/ms");
         byte[] tab2 =   {0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,
                 0x12
 
@@ -93,7 +92,7 @@ public class DirectCacheTest {
             test+=directCache.get(i).length;
             //assertArrayEquals(tab,directCache.get(i));
         long stop = System.nanoTime();
-        System.out.println("Avg get:" + (stop-start)/number+" Throughput: "+ ((((long) number * (long)tab.length)/(1024*1024))/TimeUnit.SECONDS.convert(stop-start,TimeUnit.NANOSECONDS))+ "MB/s");
+        System.out.println("Avg get:" + (stop-start)/number+" Throughput: "+ ((((long) number * (long)tab.length)/(1024*1024))/TimeUnit.MILLISECONDS.convert(stop-start,TimeUnit.NANOSECONDS))+ "MB/ms");
         System.out.println(directCache.getRemaining());
 
         IntStream natural = IntStream.iterate(0,i->i+1);
@@ -112,7 +111,7 @@ public class DirectCacheTest {
         stop = System.nanoTime();
         System.out.println("Compact time :" + TimeUnit.MILLISECONDS.convert(stop-start,TimeUnit.NANOSECONDS));
         System.out.println(directCache.getRemaining());
-        for(int i=0;i<10000000;i++)
+        for(int i=0;i<number;i++)
             if(i%7==0)
             assertArrayEquals(tab2,directCache.get(i));
             else

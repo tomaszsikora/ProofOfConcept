@@ -1,16 +1,12 @@
-package com.arokis.qa;
+package com.deltavista.data.qa;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
-import java.nio.channels.Channel;
-import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 
-import static com.arokis.qa.CacheCommands.*;
+import static com.deltavista.data.qa.CacheCommands.*;
 
 /**
  * Created by tomek on 05.03.15.
@@ -22,7 +18,7 @@ public class RemoteCache implements IDirectCache {
     RemoteCache(String path) throws IOException {
 
         FileChannel fc = new RandomAccessFile(new File(path), "rw").getChannel();
-        buffer = fc.map(FileChannel.MapMode.READ_WRITE,0,128*1024);
+        buffer = fc.map(FileChannel.MapMode.READ_WRITE,0,1024*1024);
         fc.force(true);
         buffer.load();
         buffer.force();
@@ -38,8 +34,7 @@ public class RemoteCache implements IDirectCache {
             if(buffer.get()==READY)
             {
                 buffer.position(1);
-                long remaining = buffer.getLong();
-                return remaining;
+                return buffer.getLong();
             }
             Thread.yield();
         }

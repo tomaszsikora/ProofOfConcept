@@ -1,4 +1,4 @@
-package com.arokis.qa;
+package com.deltavista.data.qa;
 
 /**
  * Created by tomek on 06.03.15.

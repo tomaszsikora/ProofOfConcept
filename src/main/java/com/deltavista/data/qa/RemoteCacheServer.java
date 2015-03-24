@@ -1,30 +1,26 @@
-package com.arokis.qa;
+package com.deltavista.data.qa;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.channels.FileLock;
-import java.util.concurrent.*;
 import java.util.concurrent.locks.*;
 
-import static com.arokis.qa.CacheCommands.*;
+import static com.deltavista.data.qa.CacheCommands.*;
 
 /**
  * Created by tomek on 06.03.15.
  */
 public class RemoteCacheServer {
-    DirectCache cache;
+    final DirectCache cache;
     FileChannel fc;
-    ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
     public MappedByteBuffer buffer;
-    RemoteCacheServer(String path) throws IOException {
-        cache = new DirectCache(1);
+    RemoteCacheServer(String path, int size) throws IOException {
+        cache = new DirectCache(size,5000000000L);
         fc = new RandomAccessFile(new File(path), "rw").getChannel();
-        buffer = fc.map(FileChannel.MapMode.READ_WRITE,0,128*1024);
+        buffer = fc.map(FileChannel.MapMode.READ_WRITE,0,1024*1024);
         fc.size();
         fc.force(true);
 
@@ -33,13 +29,12 @@ public class RemoteCacheServer {
         buffer.force();
 
     }
-    public void read() throws InterruptedException {
+    public void read()
+    {
         buffer.position(0);
         byte operation = buffer.get();
         if(operation==0)
         {
-            LockSupport.parkNanos(1);
-
             return;
         }
         switch (operation)
@@ -85,10 +80,10 @@ public class RemoteCacheServer {
     }
 
     public static void main(String[] args) throws IOException, InterruptedException {
-        RemoteCacheServer server = new RemoteCacheServer(args[0]);
+        RemoteCacheServer server = new RemoteCacheServer(args[0], Integer.valueOf(args[1]));
         while(true)
         {
-            server.read();
+           server.read();
            Thread.yield();
 
         }

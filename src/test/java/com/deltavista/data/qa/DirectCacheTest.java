@@ -85,8 +85,8 @@ public class DirectCacheTest {
     @Test
     public void put()
     {
-        int number = 50000000;
-        directCache = new DirectCache(number-1000,10000000);
+        int number = 12000000;
+        directCache = new DirectCache(number,1000000);
         long before = directCache.getRemaining();
         System.out.println(directCache.getRemaining());
         byte[] tab =   {0x00,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,
@@ -114,6 +114,8 @@ public class DirectCacheTest {
         };
         long test = 0;
 
+        System.out.println("After put "+directCache.getHeapUsage());
+
         long start = System.nanoTime();
         for(int i=0;i<number;i++)
             test+=directCache.get(i).length;
@@ -139,24 +141,29 @@ public class DirectCacheTest {
         System.out.println("Compact time :" + TimeUnit.MILLISECONDS.convert(stop-start,TimeUnit.NANOSECONDS));
         System.out.println(directCache.getRemaining());
         for(int i=0;i<number;i++)
-                assertArrayEquals("number "+i,tab,directCache.get(i));
+            assertEquals("number " + i, tab.length, directCache.get(i).length);
 
-        for(int i=0;i<number;i++)
+        for(int i=number-1;i>=0;i--)
         {
             directCache.delete(i);
         }
 
+        System.out.println("After delete  "+directCache.getHeapUsage());
         byte[] Empty = {};
 
         for(int i=0;i<number;i++)
-            assertArrayEquals("number "+i,Empty,directCache.get(i));
+            assertEquals("number " + i, 0, directCache.get(i).length);
 
         System.out.println(directCache.getRemaining());
         for(int i=0;i<number;i++)
             directCache.putOrUpdate(i,tab);
+
+
+        System.out.println("After put "+directCache.getHeapUsage());
+
         System.out.println(directCache.getRemaining());
         for(int i=0;i<number;i++)
-            assertArrayEquals("number "+i,tab,directCache.get(i));
+            assertEquals("number " + i, tab.length, directCache.get(i).length);
         System.out.println(directCache.getRemaining());
     }
 }

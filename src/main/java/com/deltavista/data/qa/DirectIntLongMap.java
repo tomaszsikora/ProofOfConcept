@@ -157,12 +157,13 @@ public class DirectIntLongMap
     }
 
 
-
-
-
-
-
-
-
-
+    public int findKeyByValueWithPrecision(long value, int skipBits) {
+        longValue.position(0);
+        for(int i=0;i<size;i++) {
+            if ((longValue.getLong() >>> skipBits) == value) {
+                return getInt(i);
+            }
+        }
+        return -1;
+    }
 }

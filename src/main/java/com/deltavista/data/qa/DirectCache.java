@@ -12,12 +12,16 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.Arrays;
+import java.util.Queue;
+import java.util.concurrent.*;
 
 /**
  * Created by tomek on 02.03.15.
  */
 public class DirectCache implements IDirectCache {
 
+    private ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
+    private Queue<Long> toCompactSpace = new PriorityBlockingQueue<Long>();
     private final long totalCapacity;
     private final ByteBuffer[] cache;
     private final DirectIntLongMap idPositionSizeMap;
@@ -44,7 +48,45 @@ public class DirectCache implements IDirectCache {
         }
         lastFreePosition = 0;
         totalCapacity = (long) partitions * (long) partitionSize;
+        executorService.scheduleWithFixedDelay(compacting,1L,1L, TimeUnit.MILLISECONDS);
     }
+
+    private Runnable compacting = new Runnable() {
+        @Override
+        public void run() {
+            long positionAndSize = toCompactSpace.poll();
+            if(positionAndSize == 0)
+                return;
+            int size = sizeDecompile(positionAndSize);
+            long position = positionDecompile(positionAndSize);
+            if(position+size == positionDecompile(toCompactSpace.peek()))
+            {
+                mergeFreeSpaces(size, position);
+            }
+            else
+            {
+                moveRecord(size, position);
+            }
+        }
+        private void mergeFreeSpaces(final int size,final long position) {
+            long next = toCompactSpace.poll();
+            int nextSize = sizeDecompile(next);
+            toCompactSpace.add(combine(nextSize+size,position));
+        }
+
+        private void moveRecord(int size, long position) {
+            if(position+size != lastFreePosition)
+            {
+                int mainIdToMove = idPositionSizeMap.findKeyByValueWithPrecision(position + size, 24);
+                putBytesOffHeap(position,get(mainIdToMove));
+            }
+            else {
+                lastFreePosition = position;
+            }
+        }
+
+
+    };
 
     @Override
     public long getRemaining()
@@ -76,14 +118,24 @@ public class DirectCache implements IDirectCache {
         }
         long positionAndSize = idPositionSizeMap.get(key);
         long position = positionDecompile(positionAndSize);
-        long size = sizeDecompile(positionAndSize);
+        int size = sizeDecompile(positionAndSize);
         if(size>=record.length)
         {
             putBytesOffHeap(position, record);
             idPositionSizeMap.put(key, combine(record.length, position));
+            if(size-record.length>0)
+            {
+                toCompactSpace.add(combine(size-record.length,position+record.length));
+            }
        }
         else
         {
+            if(size>0)
+            {
+                idPositionSizeMap.clearIfExist(key);
+                toCompactSpace.add(positionAndSize);
+            }
+
             put(key,record);
         }
     }
@@ -98,6 +150,7 @@ public class DirectCache implements IDirectCache {
         else
         {
             idPositionSizeMap.clearIfExist(maindId);
+            toCompactSpace.add(idPositionSizeMap.get(maindId));
         }
         deleted.add(maindId);
     }
@@ -238,6 +291,11 @@ public class DirectCache implements IDirectCache {
     private boolean contains(int maindId)
     {
         return ( insertedRecords.containsKey(maindId) || idPositionSizeMap.get(maindId)>0);
+    }
+
+    public int getHeapUsage()
+    {
+        return insertedRecords.size();
     }
 
 }

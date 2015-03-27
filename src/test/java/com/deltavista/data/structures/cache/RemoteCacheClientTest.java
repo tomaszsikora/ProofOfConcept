@@ -1,4 +1,6 @@
-package com.deltavista.data.qa;
+package com.deltavista.data.structures.cache;
+
+import com.deltavista.data.structures.cache.remote.RemoteCache;
 
 import java.io.IOException;
 

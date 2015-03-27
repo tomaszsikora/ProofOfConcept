@@ -1,9 +1,9 @@
-package com.deltavista.data.qa;
+package com.deltavista.data.structures.cache.direct;
 
+import com.deltavista.data.structures.cache.ICache;
+import com.deltavista.data.structures.cache.ICache;
 import gnu.trove.TIntCollection;
 import gnu.trove.iterator.TIntIterator;
-import gnu.trove.list.TIntList;
-import gnu.trove.list.linked.TIntLinkedList;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import gnu.trove.set.TIntSet;
 import gnu.trove.set.hash.TIntHashSet;
@@ -11,26 +11,21 @@ import gnu.trove.set.hash.TIntHashSet;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.Arrays;
-import java.util.Queue;
-import java.util.concurrent.*;
 
 /**
  * Created by tomek on 02.03.15.
  */
-public class DirectCache implements IDirectCache {
+public class DirectCache implements ICache
+{
 
-    private ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
-    private Queue<Long> toCompactSpace = new PriorityBlockingQueue<Long>();
     private final long totalCapacity;
     private final ByteBuffer[] cache;
     private final DirectIntLongMap idPositionSizeMap;
     private long lastFreePosition;
     private final int partitions;
-    private final int partitionSize = 1024*1024*1024;
-
-    private TIntObjectHashMap<byte[]> insertedRecords = new TIntObjectHashMap<byte[]>(16384, 0.9F);
-    private TIntSet deleted = new TIntHashSet(10, 0.9f);
+    private final int partitionSize = 128*1024*1024;
+    private final TIntObjectHashMap<byte[]> insertedRecords = new TIntObjectHashMap<byte[]>(16384, 0.9F);
+    private final TIntSet deleted = new TIntHashSet(10, 0.9f);
 
     private final byte[] EMPTY = {};
 
@@ -40,7 +35,6 @@ public class DirectCache implements IDirectCache {
        idPositionSizeMap = new DirectIntLongMap(numberOfRecords);
 
         partitions = (int)((sizeInBytes/(long)partitionSize)+1L);
-        //partitions = 20;
         cache = new ByteBuffer[partitions];
         for(int i=0;i<partitions;i++)
         {
@@ -48,55 +42,29 @@ public class DirectCache implements IDirectCache {
         }
         lastFreePosition = 0;
         totalCapacity = (long) partitions * (long) partitionSize;
-        executorService.scheduleWithFixedDelay(compacting,1L,1L, TimeUnit.MILLISECONDS);
     }
 
-    private Runnable compacting = new Runnable() {
-        @Override
-        public void run() {
-            long positionAndSize = toCompactSpace.poll();
-            if(positionAndSize == 0)
-                return;
-            int size = sizeDecompile(positionAndSize);
-            long position = positionDecompile(positionAndSize);
-            if(position+size == positionDecompile(toCompactSpace.peek()))
-            {
-                mergeFreeSpaces(size, position);
-            }
-            else
-            {
-                moveRecord(size, position);
-            }
-        }
-        private void mergeFreeSpaces(final int size,final long position) {
-            long next = toCompactSpace.poll();
-            int nextSize = sizeDecompile(next);
-            toCompactSpace.add(combine(nextSize+size,position));
-        }
-
-        private void moveRecord(int size, long position) {
-            if(position+size != lastFreePosition)
-            {
-                int mainIdToMove = idPositionSizeMap.findKeyByValueWithPrecision(position + size, 24);
-                putBytesOffHeap(position,get(mainIdToMove));
-            }
-            else {
-                lastFreePosition = position;
-            }
-        }
-
-
-    };
 
     @Override
-    public long getRemaining()
+    public synchronized long getRemaining()
     {
         return (totalCapacity - lastFreePosition);
     }
 
+
+
     @Override
     public synchronized byte[] get(final int id)
     {
+        return get0(id);
+    }
+
+    private byte[] get0(final int id)
+    {
+        if(deleted.contains(id))
+        {
+            return EMPTY;
+        }
         final long positionAndSize = idPositionSizeMap.get(id);
         if(positionAndSize!=0){
             return getBytes(positionAndSize);
@@ -108,13 +76,22 @@ public class DirectCache implements IDirectCache {
         }
 
     }
-
     @Override
-    public synchronized void putOrUpdate(int key, byte[] record)
+    public synchronized void putOrUpdate(final int key, final byte[] record)
+    {
+        putOrUpdate0(key,record);
+    }
+
+
+    private void putOrUpdate0(int key, byte[] record)
     {
         if(record.length> 16777215 )
         {
             throw new IllegalArgumentException("Record is too large to put in cache: " + record.length);
+        }
+        if(deleted.contains(key))
+        {
+            deleted.remove(key);
         }
         long positionAndSize = idPositionSizeMap.get(key);
         long position = positionDecompile(positionAndSize);
@@ -123,19 +100,13 @@ public class DirectCache implements IDirectCache {
         {
             putBytesOffHeap(position, record);
             idPositionSizeMap.put(key, combine(record.length, position));
-            if(size-record.length>0)
-            {
-                toCompactSpace.add(combine(size-record.length,position+record.length));
-            }
        }
         else
         {
             if(size>0)
             {
                 idPositionSizeMap.clearIfExist(key);
-                toCompactSpace.add(positionAndSize);
             }
-
             put(key,record);
         }
     }
@@ -150,7 +121,6 @@ public class DirectCache implements IDirectCache {
         else
         {
             idPositionSizeMap.clearIfExist(maindId);
-            toCompactSpace.add(idPositionSizeMap.get(maindId));
         }
         deleted.add(maindId);
     }
@@ -160,7 +130,7 @@ public class DirectCache implements IDirectCache {
         return deleted.contains(mainId);
     }
 
-    public  TIntCollection removeDeleted(TIntCollection ids)
+    public  synchronized TIntCollection removeDeleted(TIntCollection ids)
     {
         TIntCollection res = null;
         final TIntIterator i = ids.iterator();
@@ -220,8 +190,6 @@ public class DirectCache implements IDirectCache {
 
     }
 
-
-
     private boolean canBePutOnOffHeap(final byte[] record)
     {
         return idPositionSizeMap.remaining()>0 && record.length < getRemaining();
@@ -279,13 +247,13 @@ public class DirectCache implements IDirectCache {
         while (read > 0);
     }
     @Deprecated
-    public int getOffsetForId(int maindId)
+    public synchronized int getOffsetForId(int maindId)
     {
-        if(!isDeleted(maindId) && contains(maindId))
-            {
-                return maindId;
-            }
-        return -1;
+                if(contains(maindId))
+                {
+                    return maindId;
+                }
+                return -1;
     }
 
     private boolean contains(int maindId)

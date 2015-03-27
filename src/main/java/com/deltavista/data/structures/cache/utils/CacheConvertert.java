@@ -1,6 +1,7 @@
-package com.deltavista.data.qa;
+package com.deltavista.data.structures.cache.utils;
 
-import java.io.File;
+import com.deltavista.data.structures.cache.direct.DirectCache;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -63,14 +64,12 @@ class CacheConvertert
             fileChannel.read(record);
             record.flip();
             fileChannelMain.write(record);
-            combined = DirectCache.combine(length,position);
+            combined = DirectCache.combine(length, position);
             position+=length;
             longCombined.clear();
             longCombined.putLong(combined);
             longCombined.flip();
             fileChannelLong.write(longCombined);
-
-
 
         }
     }

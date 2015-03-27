@@ -1,10 +1,8 @@
-package com.deltavista.data.qa;
+package com.deltavista.data.structures.cache;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
+import com.deltavista.data.structures.cache.direct.DirectCache;
+
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.Paths;
 import java.util.concurrent.ThreadLocalRandom;

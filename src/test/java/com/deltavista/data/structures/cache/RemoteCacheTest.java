@@ -1,4 +1,4 @@
-package com.deltavista.data.qa;
+package com.deltavista.data.structures.cache;
 
 import org.junit.Test;
 

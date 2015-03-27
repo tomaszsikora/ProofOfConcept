@@ -1,9 +1,12 @@
-package com.deltavista.data.qa;
+package com.deltavista.data.structures.cache;
+
+import java.util.concurrent.ExecutionException;
 
 /**
  * Created by tomek on 06.03.15.
  */
-public interface IDirectCache {
+public interface ICache
+{
     long getRemaining();
 
     byte[] get(int id);

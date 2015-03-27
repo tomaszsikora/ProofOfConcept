@@ -1,13 +1,12 @@
-package com.deltavista.data.qa;
+package com.deltavista.data.structures.cache.remote;
+
+import com.deltavista.data.structures.cache.direct.DirectCache;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.concurrent.locks.*;
-
-import static com.deltavista.data.qa.CacheCommands.*;
 
 /**
  * Created by tomek on 06.03.15.
@@ -39,7 +38,7 @@ public class RemoteCacheServer {
         }
         switch (operation)
             {
-                case GET:
+                case CacheCommands.GET:
                     buffer.position(1);
                     int mainId = buffer.getInt();
                     byte[] record = cache.get(mainId);
@@ -47,9 +46,9 @@ public class RemoteCacheServer {
                     buffer.putInt(record.length);
                     buffer.put(record);
                     buffer.position(0);
-                    buffer.put(READY);
+                    buffer.put(CacheCommands.READY);
                     break;
-                case PUTORUPDATE:
+                case CacheCommands.PUTORUPDATE:
                     buffer.position(1);
                     int key = buffer.getInt();
                     int size = buffer.getInt();
@@ -57,20 +56,20 @@ public class RemoteCacheServer {
                     buffer.get(newRecord);
                     cache.putOrUpdate(key,newRecord);
                     buffer.position(0);
-                    buffer.put(READY);
+                    buffer.put(CacheCommands.READY);
                     break;
-                case DELETE:
+                case CacheCommands.DELETE:
                     buffer.position(1);
                     int id = buffer.getInt();
                     cache.delete(id);
                     buffer.position(0);
-                    buffer.put(READY);
+                    buffer.put(CacheCommands.READY);
                     break;
-                case REMAINING:
+                case CacheCommands.REMAINING:
                     buffer.position(1);
                     buffer.putLong(cache.getRemaining());
                     buffer.position(0);
-                    buffer.put(READY);
+                    buffer.put(CacheCommands.READY);
                     break;
                 default:
                     break;

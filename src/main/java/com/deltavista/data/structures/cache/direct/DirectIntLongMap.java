@@ -1,10 +1,7 @@
-package com.deltavista.data.qa;
-
-import gnu.trove.map.TIntLongMap;
+package com.deltavista.data.structures.cache.direct;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
 import java.nio.channels.FileChannel;
 
 /**
@@ -20,7 +17,7 @@ public class DirectIntLongMap
 
     private int firstFree;
 
-    DirectIntLongMap(int size)
+    public DirectIntLongMap(int size)
     {
         firstFree = 0;
         this.size = size;
@@ -38,12 +35,12 @@ public class DirectIntLongMap
         return size - firstFree;
     }
 
-    public int getOffset(int mainId)
+    public  int getOffset(int mainId)
     {
         return find(mainId);
     }
 
-    public long get(int key)
+    public  long get(int key)
     {
         int index = find(key);
         if(index<0)
@@ -53,7 +50,7 @@ public class DirectIntLongMap
         return getLong(index);
     }
 
-    public void put(int key, long record)
+    public  void put(int key, long record)
     {
         final int index = find(key);
         if(index<0 || firstFree==0)
@@ -71,17 +68,12 @@ public class DirectIntLongMap
             }
     }
 
-    public void clearIfExist(final int mainId)
+    public  void clearIfExist(final int mainId)
     {
-        if(find(mainId)<0)
+        if(find(mainId)!=-1)
         {
-            return;
+            put(mainId,0L);
         }
-        else
-        {
-            put(mainId,0l);
-        }
-
     }
 
     private int find(int mainId)
@@ -115,10 +107,6 @@ public class DirectIntLongMap
 
     private int getInt(int i)
     {
-//        if(i<0)
-//        {
-//            return -1;
-//        }
         intKey.position(i*4);
         return intKey.getInt();
     }
@@ -160,8 +148,16 @@ public class DirectIntLongMap
     public int findKeyByValueWithPrecision(long value, int skipBits) {
         longValue.position(0);
         for(int i=0;i<size;i++) {
-            if ((longValue.getLong() >>> skipBits) == value) {
-                return getInt(i);
+            try
+            {
+                if ((longValue.getLong() >>> skipBits) == value)
+                {
+                    return getInt(i);
+                }
+            }
+            catch (Exception e)
+            {
+                System.out.println(i + " " + e);
             }
         }
         return -1;

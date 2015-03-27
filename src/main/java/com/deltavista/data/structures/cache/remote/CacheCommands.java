@@ -1,9 +1,9 @@
-package com.deltavista.data.qa;
+package com.deltavista.data.structures.cache.remote;
 
 /**
  * Created by Tomek on 2015-03-07.
  */
-public class CacheCommands {
+class CacheCommands {
     static final public byte READY = 0;
     static final public byte GET = 1;
     static final public byte PUTORUPDATE = 2;

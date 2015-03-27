@@ -1,4 +1,6 @@
-package com.deltavista.data.qa;
+package com.deltavista.data.structures.cache.remote;
+
+import com.deltavista.data.structures.cache.ICache;
 
 import java.io.File;
 import java.io.IOException;
@@ -6,16 +8,15 @@ import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
-import static com.deltavista.data.qa.CacheCommands.*;
-
 /**
  * Created by tomek on 05.03.15.
  */
-public class RemoteCache implements IDirectCache {
+public class RemoteCache implements ICache
+{
 
     MappedByteBuffer buffer;
 
-    RemoteCache(String path) throws IOException {
+    public RemoteCache(String path) throws IOException {
 
         FileChannel fc = new RandomAccessFile(new File(path), "rw").getChannel();
         buffer = fc.map(FileChannel.MapMode.READ_WRITE,0,1024*1024);

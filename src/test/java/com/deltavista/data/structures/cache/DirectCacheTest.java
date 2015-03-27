@@ -1,11 +1,11 @@
-package com.deltavista.data.qa;
+package com.deltavista.data.structures.cache;
 
 
+import com.deltavista.data.structures.cache.direct.DirectCache;
+import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -53,35 +53,6 @@ public class DirectCacheTest {
         assertEquals(inputPosition,(combined>>>16));
     }
 
-//    @Test
-//    public void errorTest()
-//    {
-//        directCache = new DirectCache(2);
-//        byte [] zero = {0x00};
-//        byte [] max = {(byte) 255};
-//        directCache.putOrUpdate(1, max );
-//        directCache.putOrUpdate(2, zero );
-//        directCache.putOrUpdate(3, max );
-//        while(true)
-//        {
-//
-//            directCache.putOrUpdate(1, zero );
-//            directCache.putOrUpdate(3, max );
-//
-//
-//
-//            if(directCache.get(2)[0]!=0x00)
-//            {
-//                System.out.println("Error");
-//                break;
-//            }
-//            directCache.putOrUpdate(1, max );
-//            directCache.putOrUpdate(3, zero );
-//            directCache.putOrUpdate(2, max );
-//            directCache.putOrUpdate(2, zero );
-//        }
-//    }
-//
     @Test
     public void put()
     {
@@ -92,17 +63,11 @@ public class DirectCacheTest {
         byte[] tab =   {0x00,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,
                 0x00,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,
                 0x00,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,
-//                0x00,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,
-//                0x00,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,
-//                0x00,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,
-//                0x00,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,
-//                0x00,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,0x01,0x12,0x11,0x12,
-
         };
         System.out.println(tab.length);
 
         long startPut = System.nanoTime();
-        for(int i=0;i<number;i++)
+        for(int i=0;i<number+100;i++)
        // if(i%2==0)
             directCache.putOrUpdate(i,tab);
 
@@ -125,13 +90,6 @@ public class DirectCacheTest {
         System.out.println("Avg get:" + (stop-start)/number );
         System.out.println(directCache.getRemaining());
 
-      //  IntStream natural = IntStream.iterate(0,i->i+1);
-//
-    //    natural.limit(number+1000).filter(i -> i%7==0).parallel().forEach(i -> directCache.putOrUpdate(i, tab2));
-//        for(int i=0;i<number*3;i++)
-//            if(i%7==0)
-//            directCache.putOrUpdate(i, tab2);
-
 
         long after = directCache.getRemaining();
         System.out.println(after);
@@ -140,19 +98,19 @@ public class DirectCacheTest {
         stop = System.nanoTime();
         System.out.println("Compact time :" + TimeUnit.MILLISECONDS.convert(stop-start,TimeUnit.NANOSECONDS));
         System.out.println(directCache.getRemaining());
-        for(int i=0;i<number;i++)
+        for(int i=0;i<number+100;i++)
             assertEquals("number " + i, tab.length, directCache.get(i).length);
 
         for(int i=number-1;i>=0;i--)
         {
-            directCache.delete(i);
+            directCache.putOrUpdate(i,tab2);
         }
 
         System.out.println("After delete  "+directCache.getHeapUsage());
         byte[] Empty = {};
 
         for(int i=0;i<number;i++)
-            assertEquals("number " + i, 0, directCache.get(i).length);
+            assertEquals("number " + i, tab2.length, directCache.get(i).length);
 
         System.out.println(directCache.getRemaining());
         for(int i=0;i<number;i++)
@@ -166,4 +124,96 @@ public class DirectCacheTest {
             assertEquals("number " + i, tab.length, directCache.get(i).length);
         System.out.println(directCache.getRemaining());
     }
+
+
+    @Test
+    public void putOnHeap()
+    {
+        DirectCache cache = new DirectCache(3,3);
+        int number = 1000;
+        byte[] tab1 = {0x11,0x12,0x13};
+        byte[] tab2 = {0x13,0x12,0x14};
+        for(int i=0;i<number;i++)
+        {
+            if(i%2==0)
+            {
+                cache.putOrUpdate(i, tab1);
+                Assert.assertArrayEquals(tab1, cache.get(i));
+            }
+            else
+            {
+                cache.putOrUpdate(i, tab2);
+                Assert.assertArrayEquals(tab2, cache.get(i));
+            }
+        }
+        for(int i=0;i<number;i++)
+        {
+            if(i%2==0)
+            {
+                cache.putOrUpdate(i, tab2);
+                Assert.assertArrayEquals(tab2, cache.get(i));
+            }
+            else
+            {
+                cache.putOrUpdate(i, tab1);
+                Assert.assertArrayEquals(tab1, cache.get(i));
+            }
+
+        }
+        byte[] EMPTY = {};
+        for(int i=0;i<number;i++)
+        {
+            if(i%2==0)
+            {
+                cache.delete(i);
+
+                Assert.assertArrayEquals(EMPTY, cache.get(i));
+            }
+            else
+            {
+                cache.putOrUpdate(i, tab1);
+                Assert.assertArrayEquals(tab1, cache.get(i));
+            }
+
+        }
+
+        for(int i=0;i<number;i++)
+        {
+            if(i%2==0)
+            {
+                cache.putOrUpdate(i, tab2);
+                Assert.assertArrayEquals(tab2, cache.get(i));
+            }
+            else
+            {
+                cache.putOrUpdate(i, tab1);
+                Assert.assertArrayEquals(tab1, cache.get(i));
+            }
+
+        }
+
+    }
+
+
+
+    @Test
+    public void updateOffHeap()
+    {
+        DirectCache cache = new DirectCache(3, 3);
+        int number = 1000;
+        byte[] tab1 = { 0x11, 0x12, 0x13 };
+        byte[] tab2 = { 0x13, 0x12 };
+        for (int i = 0; i < number; i++)
+        {
+            cache.putOrUpdate(i, tab1);
+            Assert.assertArrayEquals(tab1, cache.get(i));
+        }
+        for (int i = 0; i < number; i++)
+        {
+            cache.putOrUpdate(i, tab2);
+            Assert.assertArrayEquals(tab2, cache.get(i));
+        }
+    }
+
+
 }

@@ -8,12 +8,12 @@
     <version>6.1.8</version>
   </parent>
 
-  <groupId>com.deltavista.data.qa</groupId>
-  <artifactId>ProofOfConcept</artifactId>
+  <groupId>com.deltavista.data</groupId>
+  <artifactId>Identification-DataStructures</artifactId>
   <version>1.0.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
-  <name>ProofOfConcept</name>
+  <name>Identification DataStructures</name>
 
 
 
@@ -43,7 +43,7 @@
         <configuration>
           <archive>
             <manifest>
-              <mainClass>com.deltavista.data.qa.RemoteCacheClientTest</mainClass>
+              <mainClass>RemoteCacheClientTest</mainClass>
             </manifest>
           </archive>
           <descriptorRefs>
